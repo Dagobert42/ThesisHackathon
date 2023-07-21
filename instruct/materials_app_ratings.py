@@ -6,6 +6,7 @@ import torch
 os.environ["no_proxy"] = "localhost,127.0.0.1,::1"
 os.environ["GRADIO_TEMP_DIR"] = "tmp/"
 
+# TODO: Try MPT
 text_gen_pipeline = pipeline('text-generation', model='gpt2', max_new_tokens=100)
 def branch_rec(input_text):
     output_text = text_gen_pipeline(input_text)[0]['generated_text']
