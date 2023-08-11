@@ -1,5 +1,6 @@
 import json
 import re
+import random
 
 
 def load_data(path):
@@ -20,9 +21,9 @@ def load_data(path):
     return sentences, all_labels, label_list, label_dict
 
 
-def get_descriptions(labels, descriptions):
+def get_descriptions(entities, descriptions):
     description_text = """"""
-    for l in set(labels):
+    for l in set(entities):
         if l != "null":
             description_text += l + " : " + descriptions[l] + ",\n"
             
@@ -55,12 +56,15 @@ def get_class_exemplars(seed_class, sentences, all_labels):
     return samples, sample_labels
 
 
-def create_context_prompt(exemplar1, labels1, exemplar2, labels2):
-    entities = set(labels1 + labels2)
+def create_context_prompt(sentence1, labels1, sentence2, labels2):
+    exemplar1 = tag_exemplar(sentence1, labels1)
+    exemplar2 = tag_exemplar(sentence2, labels2)
+    
+    entity_set = set(labels1 + labels2)
     try:
-        entities = '\n'.join(entities.remove('null'))
+        entities = '\n'.join(entity_set.remove('null'))
     except:
-        entities = '\n'.join(entities)
+        entities = '\n'.join(entity_set)
     prompt = f"""You are given this set of entities:
 {entities}
 
@@ -72,7 +76,7 @@ Example 2: {exemplar2}
 
 Give a definition of each entity type and explain why the words from the examples belong to this entity.
 """
-    return prompt
+    return prompt, entity_set
 
 
 def add_spaces(sentence):
@@ -80,7 +84,7 @@ def add_spaces(sentence):
     i = 0
     no_tag = False
     for j, char in enumerate(sentence):
-        if char in '<[':
+        if char in '<[°':
             result += sentence[i:j] + ' '
             i = j
         elif char in '>]%':
@@ -139,7 +143,7 @@ def count_sentence_appearance(all_labels, label_list):
 
 
 def extract_augmentations(responses, label_list):
-    p = '[0-9]. '
+    p = 'Example [0-9]\:\s'
     aug_sentences = []
     aug_labels = []
     for response in responses:
@@ -158,3 +162,29 @@ def extract_augmentations(responses, label_list):
                 print("Parsing the reply failed with Exception:", e)
                 continue
     return aug_sentences, aug_labels
+
+
+def create_context(
+        descriptions,
+        exemplar_1,
+        exemplar_2,
+        ):
+    labels1 = exemplar_1[1]
+    exemplar1 = tag_exemplar(exemplar_1[0], labels1)
+    labels2 = exemplar_2[1]
+    exemplar2 = tag_exemplar(exemplar_2[0], labels2)
+
+    entities = set(labels1 + labels2)
+    try:
+        entities.remove('null')
+    except:
+        pass
+
+    entity_dict = get_descriptions(entities, descriptions)
+
+    return create_context_prompt(
+        exemplar1,
+        labels1,
+        exemplar2,
+        labels2,
+        ), entity_dict
